@@ -3,8 +3,8 @@
     Check if TXT-record exist for Exchange Hybrid domains
 .DESCRIPTION
     Save txt-file from Exchange Hybrid Configuration Wizard, make it comma-seperated CSV-file and 
-    then use this PowerShell funtion to check if the DNS-record exist. 
-    The funtion can ask 1.1.1.1, 8.8.4.4 or 8.8.8.8.
+    then use this PowerShell function to check if the DNS-record exist. 
+    The fucntion can ask 1.1.1.1, 8.8.4.4 or 8.8.8.8.
 .EXAMPLE
     Resolve-ExchangeHybridDNSRecord -CSVFile C:\Temp\Domains.csv -DNSServer 8.8.8.8
 .EXAMPLE
