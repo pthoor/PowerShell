@@ -4,7 +4,7 @@
 .DESCRIPTION
     Get sizes of all Shared Mailboxes in Office 365 tenant to check if a Shared Mailbox need
     Exchange Online Plan 2 license. If the mailbox exceeds 50GB in size, that mailbox need
-    a license.
+    a license. You need to run the function in Exchange Online PowerShell module or PowerShell ISE
 .EXAMPLE
     Get-SharedMailboxSize -FilePath C:\Temp\
 .PARAMETER FilePath
@@ -28,6 +28,27 @@ function Get-SharedMailboxSize{
         })]
         [string]$FilePath
     )
+
+Write-Host "Checking if Exchange Online PowerShell Module is installed..." -ForegroundColor Yellow
+
+$ExoPsSession = (Get-ChildItem -Path $($env:LOCALAPPDATA+"\Apps\2.0\") -Filter CreateExoPSSession.ps1 -Recurse | sort LastWriteTime).FullName | Select-Object -Last 1
+
+if($ExoPsSession)
+{
+    Write-Host "Module found, importing the module..." -ForegroundColor Green
+    Start-Sleep -Seconds 2
+    Import-Module $((Get-ChildItem -Path $($env:LOCALAPPDATA+"\Apps\2.0\") -Filter CreateExoPSSession.ps1 -Recurse | sort LastWriteTime).FullName | Select-Object -Last 1)
+    Start-Sleep -Seconds 5
+    Connect-EXOPSSession
+}
+else
+{
+    Write-Host "You need to install Exchange Online PowerShell Module..." -ForegroundColor Red
+    Write-Host "Going to http://aka.ms/exopspreview to download the module..." -ForegroundColor Yellow
+    Start-Sleep -Seconds 5
+    Start-Process "http://aka.ms/exopspreview"
+    Write-Host "Install the module and run the PowerShell function again" -ForegroundColor Red
+}
 
 $Header = @"
 <style>
