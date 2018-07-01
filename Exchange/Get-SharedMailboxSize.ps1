@@ -12,10 +12,13 @@
 .OUTPUTS
     Will open the HTML file with Invoke-Expression $FilePath\SharedMailboxSizes.html
 .NOTES
-    Version:        1.0
+    Version:        1.1
     Author:         Pierre Thoor, AddPro AB
     Creation Date:  2018-06-28
-    Purpose/Change: Initial script development
+    Purpose/Change: Compress Where-Object and $AllSharedMailboxes variable
+
+    Updates:        Version 1.0 | 2018-06-28 | Initial script development
+                    Version 1.1 | 2018-07-01 | Compress Where-Object and $AllSharedMailboxes variable
 #>
 
 function Get-SharedMailboxSize{
@@ -59,7 +62,8 @@ TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
 "@
 
 
-$SharedMailboxesOver48 = Get-Mailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Get-MailboxStatistics -ErrorAction SilentlyContinue | Select-Object DisplayName,
+
+$AllSharedMailboxes = Get-Mailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Get-MailboxStatistics -ErrorAction SilentlyContinue | Select-Object DisplayName,
     @{
         name       = "TotalItemSize(MB)"
         expression = {
@@ -68,22 +72,10 @@ $SharedMailboxesOver48 = Get-Mailbox -RecipientTypeDetails SharedMailbox -Result
           )
         }
     },
-    ItemCount |
-    Where-Object {$_."TotalItemSize(MB)" -gt 48GB/1MB} | Sort-Object "TotalItemSize(MB)" -Descending | ConvertTo-Html -fragment -PreContent '<h2>Shared Mailboxes that needs Exchange Online Plan 2 license</h2>'
+    ItemCount
 
-
-$SharedMailboxesBelow48 = Get-Mailbox -RecipientTypeDetails SharedMailbox -ResultSize Unlimited -ErrorAction SilentlyContinue | Get-MailboxStatistics -ErrorAction SilentlyContinue | Select-Object DisplayName,
-    @{
-        name       = "TotalItemSize(MB)"
-        expression = {
-          [Math]::floor(
-            [int]($_.TotalItemSize.value.ToString() -replace '[A-Z0-9.\s]+\(' -replace '\sbytes\)' -replace ',') / 1MB
-          )
-        }
-    },
-    ItemCount |
-    Where-Object {$_."TotalItemSize(MB)" -lt 48GB/1MB} | Sort-Object "TotalItemSize(MB)" -Descending | ConvertTo-Html -fragment -PreContent '<h2>Shared Mailboxes that does not need license</h2>'
-
+$SharedMailboxesOver48 = $AllSharedMailboxes | Where-Object {$_."TotalItemSize(MB)" -gt 48GB/1MB} | Sort-Object "TotalItemSize(MB)" -Descending | ConvertTo-Html -fragment -PreContent '<h2>Shared Mailboxes that needs Exchange Online Plan 2 license</h2>'
+$SharedMailboxesBelow48 = $AllSharedMailboxes | Where-Object {$_."TotalItemSize(MB)" -lt 48GB/1MB} | Sort-Object "TotalItemSize(MB)" -Descending | ConvertTo-Html -fragment -PreContent '<h2>Shared Mailboxes that does not need license</h2>'
 
 
 if($SharedMailboxesOver48 -and $SharedMailboxesBelow48)
