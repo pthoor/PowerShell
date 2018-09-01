@@ -6,7 +6,6 @@ TD {border-width: 1px; padding: 3px; border-style: solid; border-color: black;}
 </style>
 "@
 
-
 $Date = (Get-Date).AddDays(-10)
 $DateOutput = Get-Date -Format "yyyyMMddHHmm"
 $ResultPath = "C:\Temp\FilesToBeDeletedLogs"
@@ -36,7 +35,6 @@ try {
     $LogFilesToDelete | Export-Csv -Path $ResultPath\"Report_HomeFolders $($DateOutput).csv" -NoTypeInformation -Encoding UTF8 -Delimiter ";"
 
     $i = 1
-
     $FilesToDelete | ForEach-Object {
         Write-Progress -Activity "Moving $($_.name)" -Status "File $i of $($FilesToDelete.Count)" -CurrentOperation "Moving files to $($Target)" -PercentComplete (($i / $FilesToDelete.Count) * 100)
         $i++
@@ -44,8 +42,6 @@ try {
         New-Item $NewPath -type Directory -ErrorAction SilentlyContinue
         Move-Item $_.FullName -Destination $NewPath -Verbose *>&1 | Out-File $ResultPath\"MoveItemLog $($DateOutput).txt" -Append            
     }
-   
-
 }
 catch {
 
