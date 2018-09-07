@@ -7,6 +7,14 @@
     an Global Admin as an administrator for users OneDrive.  
 .EXAMPLE
     Add-OneDriveSecondaryAdmin -TenantName "Contoso" -SecondaryAdmin "admin@contoso.onmicrosoft.com" -GlobalAdmin "admin@contoso.onmicrosoft.com" -File "C:\temp\users.txt"
+.EXAMPLE
+    Add-OneDriveSecondaryAdmin -TenantName "Contoso" -SecondaryAdmin "admin@contoso.onmicrosoft.com" -GlobalAdmin "admin@contoso.onmicrosoft.com" -File "C:\temp\users.txt" -WhatIf
+.EXAMPLE
+    Add-OneDriveSecondaryAdmin -TenantName "Contoso" -SecondaryAdmin "admin@contoso.onmicrosoft.com" -GlobalAdmin "admin@contoso.onmicrosoft.com" -File "C:\temp\users.txt" -Confirm
+.EXAMPLE
+    Add-OneDriveSecondaryAdmin -TenantName "Contoso" -SecondaryAdmin "admin@contoso.onmicrosoft.com" -GlobalAdmin "admin@contoso.onmicrosoft.com" -WhatIf
+.EXAMPLE
+    Add-OneDriveSecondaryAdmin -TenantName "Contoso" -SecondaryAdmin "admin@contoso.onmicrosoft.com" -GlobalAdmin "admin@contoso.onmicrosoft.com" -Confirm
 .PARAMETER TenantName
     Name of your tenant
 .PARAMETER SecondaryAdmin
@@ -14,7 +22,7 @@
 .PARAMETER GlobalAdmin
     UPN of the Global Admin who will connect via PowerShell to Office 365 (Connect-SPOService)
 .PARAMETER File
-    Filepath to the file containing UPN of users we want to add an secondary administrator
+    Path to file containing UPN of users we want to add an secondary administrator. If this is not specified the function will run on all users in the tenant.
 .OUTPUTS
     Write-Host in current console
 .NOTES
@@ -28,7 +36,10 @@
 #>
 Function Add-OneDriveSecondaryAdmin
 {
-    [CmdletBinding()]
+    [CmdletBinding(
+        SupportsShouldProcess=$True,
+        ConfirmImpact='High'
+    )]
     Param(
         [Parameter(Position=0,
         HelpMessage="Name of the tenant. E.g. Contoso", 
@@ -46,8 +57,8 @@ Function Add-OneDriveSecondaryAdmin
         [string]$GlobalAdmin,
 
         [Parameter(Position=3,
-        HelpMessage="Path to file containing users UPN. E.g. C:\temp\users.txt", 
-        Mandatory=$True)]
+        HelpMessage="Path to file containing users UPN. E.g. C:\temp\users.txt. If not specified, SecondaryAdmin will be added to all users in the tenant", 
+        Mandatory=$false)]
         [ValidateScript({
         If(Test-Path $_ -PathType "leaf"){$true}else{Throw "Invalid path given: $_"}
         })]
@@ -59,17 +70,29 @@ Function Add-OneDriveSecondaryAdmin
 
     $OneDriveURLs = Get-SPOSite -IncludePersonalSite $true -Limit All -Filter "Url -like '-my.sharepoint.com/personal/'"
 
-    Get-Content -Path $File | ForEach-Object{
-        if($OneDriveURLs.Owner -like $_){
-            $NewURL = $_ -replace '\.','_'
-            $NewURL = $NewURL -replace '@','_'
-            $OneDriveSite = Get-SPOSite -IncludePersonalSite $true -Filter "Url -like '-my.sharepoint.com/personal/$newurl'"
-            Set-SPOUser -Site $OneDriveSite -LoginName $SecondaryAdmin -IsSiteCollectionAdmin $false | Out-Null
-            Write-Host "Updated secondary admin $SecondaryAdmin to $($OneDriveSite.URL)"
+    if($File){
+        if ($PSCmdlet.ShouldProcess("users specified in $File","Adding $SecondaryAdmin")){
+            Get-Content -Path $File | ForEach-Object{
+                if($OneDriveURLs.Owner -like $_){
+                    $NewURL = $_ -replace '\.','_'
+                    $NewURL = $NewURL -replace '@','_'
+                    $OneDriveSite = Get-SPOSite -IncludePersonalSite $true -Filter "Url -like '-my.sharepoint.com/personal/$newurl'"
+                    Set-SPOUser -Site $OneDriveSite -LoginName $SecondaryAdmin -IsSiteCollectionAdmin $false -ErrorAction SilentlyContinue | Out-Null
+                    Write-Host "Updated secondary admin $SecondaryAdmin to $($OneDriveSite.URL)"
+                }
+                else{
+                    Write-Host " -> Couldn't find OneDrive for user $_" -ForegroundColor Red
+                }
+            }
         }
-        
-        else{
-            Write-Host " -> Couldn't find OneDrive for user $_" -ForegroundColor Red
+    }
+    else{
+        if ($PSCmdlet.ShouldProcess("all users in $($TenantName.ToUpper()) tenant","Adding $SecondaryAdmin")){
+            foreach($OneDriveURL in $OneDriveURLs)
+            {
+            Set-SPOUser -Site $OneDriveURL.URL -LoginName $SecondaryAdmin -IsSiteCollectionAdmin $True -ErrorAction SilentlyContinue | Out-Null
+            Write-Host "Updated secondary admin $SecondaryAdmin to $($OneDriveURL.URL)" 
+            }
         }
     }
 }
